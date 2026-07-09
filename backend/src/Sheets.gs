@@ -58,8 +58,12 @@ function lerTodos_(nomeAba) {
   var out = [];
   for (var r = 0; r < values.length; r++) {
     var row = values[r];
-    var isBlank = row.every(function (c) { return c === '' || c === null || c === undefined; });
-    if (isBlank) continue;
+    // Considera linha real só quando a 1ª coluna (id/autoincrement) está preenchida —
+    // evita tratar como registro linhas "fantasma" com formatação/preenchimento
+    // acidental em alguma coluna (ex.: arrastar uma fórmula/valor por milhares de linhas).
+    var primeiraCelula = row[0];
+    var idVazio = primeiraCelula === '' || primeiraCelula === null || primeiraCelula === undefined;
+    if (idVazio) continue;
     var obj = { _row: r + 2 };
     for (var c = 0; c < row.length; c++) {
       var campo = invertido[c + 1];
