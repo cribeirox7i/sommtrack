@@ -53,6 +53,9 @@ Copie a URL `.../exec` gerada — é o `VITE_API_URL` do frontend.
 - Para publicar: `clasp push` (ou colar de novo) e depois `Implantar > Gerenciar implantações > editar (lápis) > Nova versão` na implantação existente — **nunca** crie uma nova implantação a cada mudança (gera URLs órfãs e quebra o frontend).
 - Após mexer em escopos/manifesto: rode `testeAutorizacao` de novo antes de gerar nova versão.
 
+## Ativar um usuário manualmente
+Não existe tela de ativação (por design). Na aba `USER` da planilha, mude a coluna `user_status` da linha do usuário para **`S`** (maiúsculo). O app também aceita `A`/`Ativo`/`Sim`/`1` como sinônimos de ativo (tolerância a edição manual), mas `S` é o valor canônico — é o que o próprio app grava quando um admin ativa alguém pela tela de Perfil.
+
 ## Limitações conhecidas
 - Sessões (30 dias) ficam em `PropertiesService` (uma propriedade por token, prefixo `sess_`) — não há expurgo automático de tokens vencidos; eles são ignorados na validação mas continuam ocupando espaço. Se isso crescer muito, criar um gatilho diário chamando uma função de limpeza.
 - `MailApp` tem cota diária (~100/dia em contas Gmail pessoais).

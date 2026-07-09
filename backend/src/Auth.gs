@@ -38,6 +38,16 @@ function gerarCodigo2fa_() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+/**
+ * user_status é editado à mão diretamente na planilha (não há tela de ativação).
+ * Aceita variações razoáveis de "ativo" além do "S" canônico, já que é um
+ * campo de entrada humana — mas o app sempre GRAVA apenas 'S' ou 'N'.
+ */
+function statusAtivo_(valor) {
+  var norm = String(valor || '').trim().toUpperCase();
+  return ['S', 'SIM', 'A', 'ATIVO', 'TRUE', '1'].indexOf(norm) !== -1;
+}
+
 function buscarUsuarioPorEmail_(email) {
   var alvo = String(email || '').trim().toLowerCase();
   var usuarios = lerTodos_('USER');
@@ -56,7 +66,7 @@ function montarUsuarioPublico_(u) {
     idioma: u.user_idioma || 'pt',
     paleta: u.user_paleta || 'green',
     modo: u.user_modo || 'dark',
-    status: u.user_status === 'S' ? 'active' : 'inactive',
+    status: statusAtivo_(u.user_status) ? 'active' : 'inactive',
     role: u.user_role === 'admin' ? 'admin' : 'user',
   };
 }
@@ -97,7 +107,7 @@ function usuarioDaSessao_(token) {
   var usuarios = lerTodos_('USER');
   var user = usuarios.filter(function (u) { return Number(u.user_id) === Number(sessao.userId); })[0];
   if (!user) throw new Error('Usuário da sessão não existe mais.');
-  if (user.user_status !== 'S') throw new Error('Usuário inativo.');
+  if (!statusAtivo_(user.user_status)) throw new Error('Usuário inativo.');
   return user;
 }
 
@@ -150,7 +160,7 @@ function authLogin_(payload) {
     registrarLog_('', email, 'login_falhou', 'USER', '', 'Credenciais inválidas.');
     throw new Error('E-mail ou senha inválidos.');
   }
-  if (user.user_status !== 'S') {
+  if (!statusAtivo_(user.user_status)) {
     return { step: 'inactive' };
   }
 
@@ -175,7 +185,7 @@ function authVerify2fa_(payload) {
 
   CacheService.getScriptCache().remove('pend_' + tempToken);
   var user = buscarPorId_('USER', 'user_id', pend.userId);
-  if (!user || user.user_status !== 'S') throw new Error('Usuário inativo.');
+  if (!user || !statusAtivo_(user.user_status)) throw new Error('Usuário inativo.');
 
   var token = criarSessao_(user.user_id);
   registrarLog_(user.user_id, user.user_mail, 'login', 'USER', user.user_id, 'Login bem-sucedido.');
