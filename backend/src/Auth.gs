@@ -170,7 +170,12 @@ function authLogin_(payload) {
     userId: user.user_id, email: email, codigo: codigo,
   }), TOKEN_2FA_TTL_SEGUNDOS);
 
-  try { enviarEmail2fa_(email, user.user_nome, codigo, user.user_idioma || 'pt'); } catch (e) {}
+  try {
+    enviarEmail2fa_(email, user.user_nome, codigo, user.user_idioma || 'pt');
+  } catch (e) {
+    registrarLog_(user.user_id, email, 'erro_envio_2fa', 'USER', user.user_id, String(e));
+    throw new Error('Não foi possível enviar o e-mail de verificação agora. Tente novamente em instantes.');
+  }
 
   return { step: '2fa', tempToken: tempToken };
 }
@@ -201,7 +206,12 @@ function authResend2fa_(payload) {
   pend.codigo = novoCodigo;
   CacheService.getScriptCache().put('pend_' + tempToken, JSON.stringify(pend), TOKEN_2FA_TTL_SEGUNDOS);
   var user = buscarPorId_('USER', 'user_id', pend.userId);
-  try { enviarEmail2fa_(pend.email, user ? user.user_nome : '', novoCodigo, user ? user.user_idioma : 'pt'); } catch (e) {}
+  try {
+    enviarEmail2fa_(pend.email, user ? user.user_nome : '', novoCodigo, user ? user.user_idioma : 'pt');
+  } catch (e) {
+    registrarLog_(user ? user.user_id : '', pend.email, 'erro_envio_2fa', 'USER', user ? user.user_id : '', String(e));
+    throw new Error('Não foi possível reenviar o e-mail agora. Tente novamente em instantes.');
+  }
   return { ok: true };
 }
 
