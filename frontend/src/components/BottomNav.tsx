@@ -20,7 +20,8 @@ export function BottomNav() {
   function irPara(tipo: TipoItem | 'home') {
     if (tipo === 'home') {
       patch({ tela: 'home' });
-      carregarDashboard(patch);
+      // já carregado no login — reconsultar a cada clique custaria uma ida ao servidor à toa
+      if (!state.dashboard) carregarDashboard(patch);
     } else {
       patch({ tela: 'list', listType: tipo, searchQuery: '', filterCategory: 'all' });
     }

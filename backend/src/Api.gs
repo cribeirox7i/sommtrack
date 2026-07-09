@@ -46,6 +46,10 @@ function podeVisualizarPerfil_(user, ownerId) {
   return relacSeguidos_(meuId).indexOf(Number(ownerId)) !== -1;
 }
 
+function invalidarCacheDashboard_(userId) {
+  try { CacheService.getScriptCache().remove('dash_' + userId); } catch (e) {}
+}
+
 function comImagemResolvida_(cfg, item) {
   var out = Object.assign({}, item);
   out[cfg.imgUrl] = urlThumbnail_(item[cfg.imgNome]) || item[cfg.imgUrl] || '';
@@ -135,6 +139,7 @@ function catalogoSalvar_(payload, user) {
   if (Object.keys(patch).length) atualizar_(cfg.aba, cfg.id, registroId, patch);
 
   registrarLog_(user.user_id, user.user_mail, idExistente ? 'editar' : 'criar', cfg.aba, registroId, '');
+  invalidarCacheDashboard_(user.user_id);
   var salvo2 = buscarPorId_(cfg.aba, cfg.id, registroId);
   return comImagemResolvida_(cfg, salvo2);
 }
@@ -146,6 +151,7 @@ function catalogoExcluir_(payload, user) {
   if (Number(registro.user_id) !== Number(user.user_id)) throw new Error('Você não pode excluir um item que não é seu.');
   excluir_(cfg.aba, cfg.id, payload.id);
   registrarLog_(user.user_id, user.user_mail, 'excluir', cfg.aba, payload.id, '');
+  invalidarCacheDashboard_(user.user_id);
   return { ok: true };
 }
 
@@ -162,6 +168,7 @@ function catalogoDuplicar_(payload, user) {
   copia[cfg.imgUrl] = original[cfg.imgUrl] || '';
   var novoId = inserir_(cfg.aba, copia);
   registrarLog_(user.user_id, user.user_mail, 'duplicar', cfg.aba, novoId, 'origem=' + payload.id);
+  invalidarCacheDashboard_(user.user_id);
   return comImagemResolvida_(cfg, buscarPorId_(cfg.aba, cfg.id, novoId));
 }
 
@@ -217,7 +224,20 @@ function paisNomePorId_(paises, paisId) {
 
 // ---- Home ----
 
+var DASHBOARD_CACHE_TTL_SEGUNDOS_ = 90;
+
+/**
+ * Contar+sortear itens de 4 abas (uma delas com milhares de linhas) é a operação mais
+ * cara do backend — cacheada por usuário por um curto período, igual ao padrão usado
+ * no carrossel público do AromaLab (o custo dominante é o overhead fixo por chamada,
+ * não o volume de dados, então evitar repetir a leitura já ajuda mesmo com TTL curto).
+ */
 function homeDashboard_(payload, user) {
+  var cacheKey = 'dash_' + user.user_id;
+  var cache = CacheService.getScriptCache();
+  var cacheado = cache.get(cacheKey);
+  if (cacheado) return JSON.parse(cacheado);
+
   var tipos = ['beer', 'wine', 'dest', 'drink'];
   var contagens = {};
   var listasProprias = {};
@@ -237,7 +257,9 @@ function homeDashboard_(payload, user) {
     destaques.push(Object.assign({ tipo: tipo }, comImagemResolvida_(cfg, escolhido)));
   });
 
-  return { contagens: contagens, destaques: destaques };
+  var resultado = { contagens: contagens, destaques: destaques };
+  try { cache.put(cacheKey, JSON.stringify(resultado), DASHBOARD_CACHE_TTL_SEGUNDOS_); } catch (e) {}
+  return resultado;
 }
 
 var BUSCA_GLOBAL_LIMITE_ = 50;

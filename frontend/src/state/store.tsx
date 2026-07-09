@@ -36,6 +36,10 @@ export interface AppState {
   isEditing: boolean;
 
   dashboard: DashboardResposta | null;
+
+  /** Cache da 1ª página (sem busca/ordenação) por "tipo:ownerId" — evita reconsultar
+   * o servidor toda vez que o usuário só troca de aba e volta (ver MEMORIA.md do AromaLab). */
+  listCache: Record<string, { itens: AnyItem[]; total: number }>;
 }
 
 export const initialState: AppState = {
@@ -73,6 +77,8 @@ export const initialState: AppState = {
   isEditing: false,
 
   dashboard: null,
+
+  listCache: {},
 };
 
 type Action = { type: 'patch'; payload: Partial<AppState> } | { type: 'logout' };

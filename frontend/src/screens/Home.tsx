@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../state/store';
 import { chamarApi } from '../api/client';
+import { carregarDashboard } from '../state/actions';
 import { traduzir } from '../i18n/dict';
 import { HeaderBusca } from '../components/Header';
 import { PlaceholderImage } from '../components/PlaceholderImage';
@@ -16,6 +17,11 @@ export function HomeScreen() {
   const t = (k: string) => traduzir(state.idioma, k);
 
   const destaques = state.dashboard?.destaques || [];
+
+  // Auto-suficiente independente de como se chegou aqui (ex.: botão "Voltar" do Perfil/Stats).
+  useEffect(() => {
+    if (!state.dashboard) carregarDashboard(patch);
+  }, [state.dashboard]);
 
   useEffect(() => {
     if (destaques.length <= 1) return;

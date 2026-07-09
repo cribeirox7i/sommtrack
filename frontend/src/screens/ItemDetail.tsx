@@ -50,11 +50,19 @@ export function ItemDetailScreen() {
     setCampoDraft('_imagemBase64', b64);
   }
 
+  /** Item sempre pertence ao próprio usuário aqui (edição só é permitida no próprio perfil). */
+  function invalidarCacheLista() {
+    const chave = `${tipo}:own`;
+    const { [chave]: _removido, ...resto } = state.listCache;
+    patch({ listCache: resto, dashboard: null });
+  }
+
   async function salvar() {
     setErro(null);
     if (!campoDraft(cfg.nome)) { setErro(t('requiredFields')); return; }
     try {
       const salvo = await chamarApi<AnyItem>('catalogo.salvar', { tipo, item: draft });
+      invalidarCacheLista();
       patch({ toast: t('itemSaved'), tela: 'list', isEditing: false, itemSelecionado: salvo });
     } catch (e) {
       setErro((e as Error).message);
@@ -64,6 +72,7 @@ export function ItemDetailScreen() {
   async function excluir() {
     try {
       await chamarApi('catalogo.excluir', { tipo, id: state.selectedItemId });
+      invalidarCacheLista();
       patch({ toast: t('itemDeleted'), tela: 'list' });
     } catch (e) {
       patch({ toast: (e as Error).message });
@@ -74,6 +83,7 @@ export function ItemDetailScreen() {
   async function duplicar() {
     try {
       await chamarApi('catalogo.duplicar', { tipo, id: state.selectedItemId });
+      invalidarCacheLista();
       patch({ toast: t('itemDuplicated'), tela: 'list' });
     } catch (e) { patch({ toast: (e as Error).message }); }
   }

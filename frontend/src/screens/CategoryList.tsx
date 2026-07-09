@@ -45,6 +45,11 @@ export function CategoryListScreen() {
   const totalPaginas = Math.max(1, Math.ceil(total / TAMANHO_PAGINA));
   const temMais = pagina < totalPaginas;
 
+  // Visão padrão (sem busca/ordenação) fica em cache: trocar de aba e voltar não deve
+  // reconsultar o servidor — o custo fixo de cada chamada ao Apps Script é alto.
+  const chaveCache = `${tipo}:${state.viewedProfileId ?? 'own'}`;
+  const ehVisaoPadrao = !buscaDebounced && !state.sortField;
+
   // Debounce: espera parar de digitar antes de refazer a busca no servidor.
   useEffect(() => {
     const id = setTimeout(() => setBuscaDebounced(state.searchQuery), 300);
@@ -62,9 +67,13 @@ export function CategoryListScreen() {
         sortField: state.sortField, sortDir: state.sortDir, pagina: numeroPagina, tamanhoPagina: TAMANHO_PAGINA,
       });
       const itens = Array.isArray(resp?.itens) ? resp.itens : [];
+      const total = Number(resp?.total) || 0;
       patch({ listaAtual: acumular ? [...state.listaAtual, ...itens] : itens });
-      setTotal(Number(resp?.total) || 0);
+      setTotal(total);
       setPagina(numeroPagina);
+      if (numeroPagina === 1 && ehVisaoPadrao) {
+        patch({ listCache: { ...state.listCache, [chaveCache]: { itens, total } } });
+      }
     } catch (err) {
       if (!acumular) patch({ listaAtual: [] });
       patch({ toast: (err as Error).message });
@@ -73,8 +82,16 @@ export function CategoryListScreen() {
     }
   }
 
-  // Qualquer mudança de filtro/ordenação/perfil/tipo recomeça do zero, na página 1.
+  // Qualquer mudança de filtro/ordenação/perfil/tipo recomeça do zero, na página 1 —
+  // reaproveitando o cache quando é a visão padrão (sem busca/ordenação) já visitada.
   useEffect(() => {
+    const cache = ehVisaoPadrao ? state.listCache[chaveCache] : undefined;
+    if (cache) {
+      patch({ listaAtual: cache.itens });
+      setTotal(cache.total);
+      setPagina(1);
+      return;
+    }
     carregarPagina(1);
   }, [tipo, state.viewedProfileId, state.searchField, state.sortField, state.sortDir, buscaDebounced]);
 
@@ -93,7 +110,12 @@ export function CategoryListScreen() {
     return () => observer.disconnect();
   }, [sentinelaEl]);
 
-  function carregarLista() { carregarPagina(1); }
+  function invalidarCache() {
+    const { [chaveCache]: _removido, ...resto } = state.listCache;
+    patch({ listCache: resto, dashboard: null });
+  }
+
+  function carregarLista() { invalidarCache(); carregarPagina(1); }
 
   function trocarPerfil(id: number | null) {
     patch({ viewedProfileId: id, filterCategory: 'all' });
