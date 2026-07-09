@@ -34,7 +34,7 @@ export function CategoryListScreen() {
   const [pagina, setPagina] = useState(1);
   const [total, setTotal] = useState(0);
   const [buscaDebounced, setBuscaDebounced] = useState(state.searchQuery);
-  const sentinelaRef = useRef<HTMLDivElement>(null);
+  const [sentinelaEl, setSentinelaEl] = useState<HTMLDivElement | null>(null);
   const t = (k: string) => traduzir(state.idioma, k);
   const tipo = state.listType;
   const cfg = ENTIDADE_CAMPOS[tipo];
@@ -61,8 +61,9 @@ export function CategoryListScreen() {
         tipo, ownerId, busca: buscaDebounced, campoBusca: state.searchField,
         sortField: state.sortField, sortDir: state.sortDir, pagina: numeroPagina, tamanhoPagina: TAMANHO_PAGINA,
       });
-      patch({ listaAtual: acumular ? [...state.listaAtual, ...resp.itens] : resp.itens });
-      setTotal(resp.total);
+      const itens = Array.isArray(resp?.itens) ? resp.itens : [];
+      patch({ listaAtual: acumular ? [...state.listaAtual, ...itens] : itens });
+      setTotal(Number(resp?.total) || 0);
       setPagina(numeroPagina);
     } catch (err) {
       if (!acumular) patch({ listaAtual: [] });
@@ -84,14 +85,13 @@ export function CategoryListScreen() {
     carregarPagina(pagina + 1);
   };
   useEffect(() => {
-    const alvo = sentinelaRef.current;
-    if (!alvo) return;
+    if (!sentinelaEl) return;
     const observer = new IntersectionObserver((entradas) => {
       if (entradas[0].isIntersecting) carregarMaisRef.current();
     }, { rootMargin: '600px' });
-    observer.observe(alvo);
+    observer.observe(sentinelaEl);
     return () => observer.disconnect();
-  }, []);
+  }, [sentinelaEl]);
 
   function carregarLista() { carregarPagina(1); }
 
@@ -270,7 +270,7 @@ export function CategoryListScreen() {
         )}
 
         {!carregandoLista && listaAtual.length > 0 && (
-          <div ref={sentinelaRef} style={{ textAlign: 'center', padding: '18px 0', fontSize: 12, color: v.textMuted, minHeight: 1 }}>
+          <div ref={setSentinelaEl} style={{ textAlign: 'center', padding: '18px 0', fontSize: 12, color: v.textMuted, minHeight: 1 }}>
             {carregandoMais && t('loading')}
           </div>
         )}
