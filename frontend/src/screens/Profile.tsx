@@ -31,16 +31,20 @@ export function ProfileScreen() {
     chamarApi<Record<string, unknown>[]>('admin.log').then(setLogs).catch(() => setLogs([]));
   }, [usuario.role]);
 
-  async function salvarPerfil(patchParcial: Partial<{ nome: string; idioma: Idioma; paleta: Paleta; modo: Modo }>) {
-    try {
-      const atualizado = await chamarApi<Usuario>('perfil.salvar', patchParcial);
-      patch({
-        usuario: atualizado,
-        idioma: patchParcial.idioma ?? state.idioma,
-        paleta: patchParcial.paleta ?? state.paleta,
-        modo: patchParcial.modo ?? state.modo,
-      });
-    } catch (e) { patch({ toast: (e as Error).message }); }
+  /**
+   * Aplica a mudança na hora (otimista) — idioma/paleta/modo são só preferência
+   * visual, não vale a pena travar o clique esperando o Apps Script responder.
+   * Salva no servidor em segundo plano; se falhar, só avisa por toast.
+   */
+  function salvarPerfil(patchParcial: Partial<{ nome: string; idioma: Idioma; paleta: Paleta; modo: Modo }>) {
+    patch({
+      idioma: patchParcial.idioma ?? state.idioma,
+      paleta: patchParcial.paleta ?? state.paleta,
+      modo: patchParcial.modo ?? state.modo,
+    });
+    chamarApi<Usuario>('perfil.salvar', patchParcial)
+      .then((atualizado) => patch({ usuario: atualizado }))
+      .catch((e) => patch({ toast: (e as Error).message }));
   }
 
   async function aoTrocarFoto(e: ChangeEvent<HTMLInputElement>) {
