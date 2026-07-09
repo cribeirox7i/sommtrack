@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { useApp } from '../state/store';
 import { chamarApi } from '../api/client';
 import { traduzir } from '../i18n/dict';
@@ -9,7 +9,7 @@ import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { ModalConfirmacao } from '../components/Modal';
 import { Icon } from '../icons/Icon';
 import { v, miniIconButtonStyle } from '../theme/styles';
-import { nomeItem, produtorItem, notaItem, imgUrlItem, dataItem, idItem, paisNome } from '../utils/itemFields';
+import { nomeItem, produtorItem, notaItem, imgUrlItem, dataItem, idItem } from '../utils/itemFields';
 import { ENTIDADE_CAMPOS } from '../types';
 import type { AnyItem, TipoItem, ViewMode } from '../types';
 
@@ -24,60 +24,56 @@ function categoriaLabel(tipo: TipoItem, item: AnyItem, bjcp: { bjcp21_id: string
   return '';
 }
 
+const TAMANHO_PAGINA = 30;
+
 export function CategoryListScreen() {
   const { state, patch } = useApp();
   const [carregandoLista, setCarregandoLista] = useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = useState<AnyItem | null>(null);
+  const [pagina, setPagina] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [buscaDebounced, setBuscaDebounced] = useState(state.searchQuery);
   const t = (k: string) => traduzir(state.idioma, k);
   const tipo = state.listType;
   const cfg = ENTIDADE_CAMPOS[tipo];
 
   const perfilVisualizado = state.viewedProfileId ? state.relac.find((u) => u.id === state.viewedProfileId) : null;
   const podeEditar = !state.viewedProfileId;
+  const listaAtual = state.listaAtual;
+  const totalPaginas = Math.max(1, Math.ceil(total / TAMANHO_PAGINA));
+
+  // Debounce: espera parar de digitar antes de refazer a busca no servidor.
+  useEffect(() => {
+    const id = setTimeout(() => setBuscaDebounced(state.searchQuery), 300);
+    return () => clearTimeout(id);
+  }, [state.searchQuery]);
+
+  // Qualquer mudança de filtro/ordenação volta pra página 1.
+  useEffect(() => { setPagina(1); }, [tipo, state.viewedProfileId, state.searchField, state.sortField, state.sortDir, buscaDebounced]);
 
   async function carregarLista() {
     setCarregandoLista(true);
     try {
       const ownerId = state.viewedProfileId || state.usuario?.id;
-      const lista = await chamarApi<AnyItem[]>('catalogo.listar', { tipo, ownerId });
-      patch({ listaAtual: lista });
-    } catch {
-      patch({ listaAtual: [] });
+      const resp = await chamarApi<{ itens: AnyItem[]; total: number }>('catalogo.listar', {
+        tipo, ownerId, busca: buscaDebounced, campoBusca: state.searchField,
+        sortField: state.sortField, sortDir: state.sortDir, pagina, tamanhoPagina: TAMANHO_PAGINA,
+      });
+      patch({ listaAtual: resp.itens });
+      setTotal(resp.total);
+    } catch (err) {
+      patch({ listaAtual: [], toast: (err as Error).message });
+      setTotal(0);
     } finally {
       setCarregandoLista(false);
     }
   }
 
-  useEffect(() => { carregarLista(); }, [tipo, state.viewedProfileId]);
+  useEffect(() => { carregarLista(); }, [tipo, state.viewedProfileId, state.searchField, state.sortField, state.sortDir, buscaDebounced, pagina]);
 
   function trocarPerfil(id: number | null) {
     patch({ viewedProfileId: id, filterCategory: 'all' });
   }
-
-  const listaFiltrada = useMemo(() => {
-    const q = state.searchQuery.trim().toLowerCase();
-    let lista = state.listaAtual;
-    if (q) {
-      lista = lista.filter((item) => {
-        const nome = nomeItem(tipo, item).toLowerCase();
-        const produtor = produtorItem(tipo, item).toLowerCase();
-        const pais = paisNome(state.paises, (item as Record<string, unknown>)[cfg.pais] as string).toLowerCase();
-        if (state.searchField === 'name') return nome.includes(q);
-        if (state.searchField === 'manufacturer') return produtor.includes(q);
-        if (state.searchField === 'country') return pais.includes(q);
-        return nome.includes(q) || produtor.includes(q) || pais.includes(q);
-      });
-    }
-    if (state.sortField) {
-      lista = [...lista].sort((a, b) => {
-        const va = String((a as Record<string, unknown>)[state.sortField!] ?? '');
-        const vb = String((b as Record<string, unknown>)[state.sortField!] ?? '');
-        const cmp = va.localeCompare(vb, undefined, { numeric: true });
-        return state.sortDir === 'asc' ? cmp : -cmp;
-      });
-    }
-    return lista;
-  }, [state.listaAtual, state.searchQuery, state.searchField, state.sortField, state.sortDir, tipo]);
 
   function abrirNovo() {
     patch({ tela: 'detail', selectedItemId: null, itemSelecionado: null, isEditing: true });
@@ -152,7 +148,7 @@ export function CategoryListScreen() {
         </div>
 
         <div style={{ fontSize: 12, color: v.textMuted, marginBottom: perfilVisualizado ? 2 : 14 }}>
-          {listaFiltrada.length} {t('itemsShown')}
+          {total} {t('itemsShown')}
         </div>
         {perfilVisualizado && (
           <div style={{ fontSize: 12, color: v.accent, fontWeight: 700, marginBottom: 14 }}>
@@ -162,13 +158,13 @@ export function CategoryListScreen() {
 
         {carregandoLista && <div style={{ textAlign: 'center', color: v.textMuted, padding: 30 }}>{t('loading')}</div>}
 
-        {!carregandoLista && listaFiltrada.length === 0 && (
+        {!carregandoLista && listaAtual.length === 0 && (
           <div style={{ textAlign: 'center', color: v.textMuted, padding: '40px 0', fontSize: 13 }}>{t('noResults')}</div>
         )}
 
-        {!carregandoLista && listaFiltrada.length > 0 && state.viewMode === 'deck' && (
+        {!carregandoLista && listaAtual.length > 0 && state.viewMode === 'deck' && (
           <div>
-            {listaFiltrada.map((item) => (
+            {listaAtual.map((item) => (
               <div
                 key={idItem(tipo, item)}
                 onClick={() => abrirItem(item, false)}
@@ -197,7 +193,7 @@ export function CategoryListScreen() {
           </div>
         )}
 
-        {!carregandoLista && listaFiltrada.length > 0 && state.viewMode === 'table' && (
+        {!carregandoLista && listaAtual.length > 0 && state.viewMode === 'table' && (
           <div className="tabela-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 560 }}>
               <thead>
@@ -215,7 +211,7 @@ export function CategoryListScreen() {
                 </tr>
               </thead>
               <tbody>
-                {listaFiltrada.map((item) => (
+                {listaAtual.map((item) => (
                   <tr key={idItem(tipo, item)} onClick={() => abrirItem(item, false)} style={{ borderBottom: `1px solid ${v.border}`, cursor: 'pointer' }}>
                     <td style={{ padding: '8px 10px', fontWeight: 700 }}>{nomeItem(tipo, item)}</td>
                     <td style={{ padding: '8px 10px' }}>{produtorItem(tipo, item)}</td>
@@ -237,15 +233,35 @@ export function CategoryListScreen() {
           </div>
         )}
 
-        {!carregandoLista && listaFiltrada.length > 0 && state.viewMode === 'gallery' && (
+        {!carregandoLista && listaAtual.length > 0 && state.viewMode === 'gallery' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
-            {listaFiltrada.map((item) => (
+            {listaAtual.map((item) => (
               <div key={idItem(tipo, item)} onClick={() => abrirItem(item, false)} style={{ cursor: 'pointer' }}>
                 <PlaceholderImage nome={nomeItem(tipo, item)} url={imgUrlItem(tipo, item)} aspect="3 / 4" />
                 <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nomeItem(tipo, item)}</div>
                 <div style={{ fontSize: 11, color: v.textMuted }}>{produtorItem(tipo, item)}</div>
               </div>
             ))}
+          </div>
+        )}
+
+        {!carregandoLista && totalPaginas > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, margin: '18px 0' }}>
+            <button
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={pagina <= 1}
+              style={{ ...miniIconButtonStyle, width: 'auto', padding: '0 14px', opacity: pagina <= 1 ? 0.4 : 1 }}
+            >
+              ← {t('previous')}
+            </button>
+            <span style={{ fontSize: 12.5, color: v.textMuted }}>{pagina} / {totalPaginas}</span>
+            <button
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={pagina >= totalPaginas}
+              style={{ ...miniIconButtonStyle, width: 'auto', padding: '0 14px', opacity: pagina >= totalPaginas ? 0.4 : 1 }}
+            >
+              {t('next')} →
+            </button>
           </div>
         )}
       </div>

@@ -41,6 +41,7 @@ export const I18N: Record<Idioma, Record<string, string>> = {
     region: 'Região', vintage: 'Safra/Ano', type: 'Tipo', ibu: 'IBU', adminBadge: 'Admin', newItem: 'Novo item',
     myAccount: 'Minha conta', savePhoto: 'Foto atualizada', requiredFields: 'Preencha os campos obrigatórios.',
     loading: 'Carregando...', sessionExpired: 'Sua sessão expirou, faça login novamente.',
+    previous: 'Anterior', next: 'Próxima',
   },
   en: {
     tagline: 'Your cellar and bar, in one place',
@@ -80,6 +81,7 @@ export const I18N: Record<Idioma, Record<string, string>> = {
     region: 'Region', vintage: 'Vintage/Year', type: 'Type', ibu: 'IBU', adminBadge: 'Admin', newItem: 'New item',
     myAccount: 'My account', savePhoto: 'Photo updated', requiredFields: 'Please fill in the required fields.',
     loading: 'Loading...', sessionExpired: 'Your session expired, please sign in again.',
+    previous: 'Previous', next: 'Next',
   },
   es: {
     tagline: 'Tu bodega y bar, en un solo lugar',
@@ -119,6 +121,7 @@ export const I18N: Record<Idioma, Record<string, string>> = {
     region: 'Región', vintage: 'Cosecha/Año', type: 'Tipo', ibu: 'IBU', adminBadge: 'Admin', newItem: 'Nuevo ítem',
     myAccount: 'Mi cuenta', savePhoto: 'Foto actualizada', requiredFields: 'Completa los campos obligatorios.',
     loading: 'Cargando...', sessionExpired: 'Tu sesión expiró, inicia sesión de nuevo.',
+    previous: 'Anterior', next: 'Siguiente',
   },
 };
 

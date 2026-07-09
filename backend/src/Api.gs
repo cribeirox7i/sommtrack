@@ -54,12 +54,50 @@ function comImagemResolvida_(cfg, item) {
 
 // ---- Catálogo (beer/wine/dest/drink) ----
 
+/**
+ * Busca/ordenação/paginação sempre no servidor — coleções reais chegam a milhares
+ * de linhas (visto em produção), então nunca devolvemos a aba inteira de uma vez.
+ */
 function catalogoListar_(payload, user) {
   var cfg = entidade_(payload.tipo);
   var ownerId = payload.ownerId ? Number(payload.ownerId) : Number(user.user_id);
   if (!podeVisualizarPerfil_(user, ownerId)) throw new Error('Você não tem acesso a este perfil.');
+
   var todos = lerTodos_(cfg.aba).filter(function (r) { return Number(r.user_id) === ownerId; });
-  return todos.map(function (r) { return comImagemResolvida_(cfg, r); });
+
+  var termo = String(payload.busca || '').trim().toLowerCase();
+  if (termo) {
+    var paises = lerTodos_('LIST_PAIS');
+    var campoBusca = payload.campoBusca || 'all';
+    todos = todos.filter(function (r) {
+      var nome = String(r[cfg.nome] || '').toLowerCase();
+      var produtor = String(r[cfg.produtor] || '').toLowerCase();
+      var pais = paisNomePorId_(paises, r[cfg.pais]).toLowerCase();
+      if (campoBusca === 'name') return nome.indexOf(termo) !== -1;
+      if (campoBusca === 'manufacturer') return produtor.indexOf(termo) !== -1;
+      if (campoBusca === 'country') return pais.indexOf(termo) !== -1;
+      return nome.indexOf(termo) !== -1 || produtor.indexOf(termo) !== -1 || pais.indexOf(termo) !== -1;
+    });
+  }
+
+  if (payload.sortField) {
+    var campo = String(payload.sortField);
+    var dir = payload.sortDir === 'desc' ? -1 : 1;
+    todos = todos.slice().sort(function (a, b) {
+      var va = String(a[campo] || '');
+      var vb = String(b[campo] || '');
+      var cmp = va.localeCompare(vb, 'pt', { numeric: true });
+      return cmp * dir;
+    });
+  }
+
+  var total = todos.length;
+  var tamanhoPagina = Math.min(200, Math.max(1, Number(payload.tamanhoPagina) || 30));
+  var pagina = Math.max(1, Number(payload.pagina) || 1);
+  var inicio = (pagina - 1) * tamanhoPagina;
+  var pageItems = todos.slice(inicio, inicio + tamanhoPagina).map(function (r) { return comImagemResolvida_(cfg, r); });
+
+  return { itens: pageItems, total: total, pagina: pagina, tamanhoPagina: tamanhoPagina };
 }
 
 function catalogoSalvar_(payload, user) {
@@ -202,21 +240,25 @@ function homeDashboard_(payload, user) {
   return { contagens: contagens, destaques: destaques };
 }
 
+var BUSCA_GLOBAL_LIMITE_ = 50;
+
 function buscaGlobal_(payload, user) {
   var termo = String(payload.query || '').trim().toLowerCase();
   if (!termo) return [];
   var paises = lerTodos_('LIST_PAIS');
   var resultado = [];
-  Object.keys(ENTIDADES_).forEach(function (tipo) {
+  Object.keys(ENTIDADES_).some(function (tipo) {
     var cfg = ENTIDADES_[tipo];
     var lista = lerTodos_(cfg.aba).filter(function (r) { return Number(r.user_id) === Number(user.user_id); });
-    lista.forEach(function (r) {
+    lista.some(function (r) {
       var nomePais = paisNomePorId_(paises, r[cfg.pais]);
       var alvo = [r[cfg.nome], r[cfg.produtor], nomePais].join(' ').toLowerCase();
       if (alvo.indexOf(termo) !== -1) {
         resultado.push(Object.assign({ tipo: tipo, paisNome: nomePais }, comImagemResolvida_(cfg, r)));
       }
+      return resultado.length >= BUSCA_GLOBAL_LIMITE_;
     });
+    return resultado.length >= BUSCA_GLOBAL_LIMITE_;
   });
   return resultado;
 }

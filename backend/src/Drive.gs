@@ -40,8 +40,18 @@ function salvarImagem_(dataUrl, nomeSugerido, user, destino) {
   return { id: arquivo.getId(), url: urlThumbnail_(arquivo.getId()) };
 }
 
+/**
+ * Só gera URL de miniatura se o valor for uma URL completa ou algo com a cara de
+ * um ID de arquivo do Drive de verdade (sem isso, texto solto digitado por engano
+ * numa célula — ex. "BEER_THUMBS" — vira milhares de requisições de imagem quebradas).
+ */
+function pareceIdDrive_(valor) {
+  return /^[A-Za-z0-9_-]{15,}$/.test(valor);
+}
+
 function urlThumbnail_(idOuUrl, tamanho) {
   if (!idOuUrl) return '';
   if (/^https?:\/\//.test(idOuUrl)) return idOuUrl;
+  if (!pareceIdDrive_(idOuUrl)) return '';
   return 'https://drive.google.com/thumbnail?id=' + idOuUrl + '&sz=w' + (tamanho || 600);
 }
