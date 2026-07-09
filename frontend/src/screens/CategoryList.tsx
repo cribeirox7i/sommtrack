@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useApp } from '../state/store';
 import { chamarApi } from '../api/client';
 import { traduzir } from '../i18n/dict';
@@ -29,10 +29,12 @@ const TAMANHO_PAGINA = 30;
 export function CategoryListScreen() {
   const { state, patch } = useApp();
   const [carregandoLista, setCarregandoLista] = useState(false);
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = useState<AnyItem | null>(null);
   const [pagina, setPagina] = useState(1);
   const [total, setTotal] = useState(0);
   const [buscaDebounced, setBuscaDebounced] = useState(state.searchQuery);
+  const sentinelaRef = useRef<HTMLDivElement>(null);
   const t = (k: string) => traduzir(state.idioma, k);
   const tipo = state.listType;
   const cfg = ENTIDADE_CAMPOS[tipo];
@@ -41,6 +43,7 @@ export function CategoryListScreen() {
   const podeEditar = !state.viewedProfileId;
   const listaAtual = state.listaAtual;
   const totalPaginas = Math.max(1, Math.ceil(total / TAMANHO_PAGINA));
+  const temMais = pagina < totalPaginas;
 
   // Debounce: espera parar de digitar antes de refazer a busca no servidor.
   useEffect(() => {
@@ -48,28 +51,49 @@ export function CategoryListScreen() {
     return () => clearTimeout(id);
   }, [state.searchQuery]);
 
-  // Qualquer mudança de filtro/ordenação volta pra página 1.
-  useEffect(() => { setPagina(1); }, [tipo, state.viewedProfileId, state.searchField, state.sortField, state.sortDir, buscaDebounced]);
-
-  async function carregarLista() {
-    setCarregandoLista(true);
+  /** numeroPagina=1 substitui a lista (mudou filtro/ordenação); demais páginas acrescentam ao final (scroll infinito). */
+  async function carregarPagina(numeroPagina: number) {
+    const acumular = numeroPagina > 1;
+    if (acumular) setCarregandoMais(true); else setCarregandoLista(true);
     try {
       const ownerId = state.viewedProfileId || state.usuario?.id;
       const resp = await chamarApi<{ itens: AnyItem[]; total: number }>('catalogo.listar', {
         tipo, ownerId, busca: buscaDebounced, campoBusca: state.searchField,
-        sortField: state.sortField, sortDir: state.sortDir, pagina, tamanhoPagina: TAMANHO_PAGINA,
+        sortField: state.sortField, sortDir: state.sortDir, pagina: numeroPagina, tamanhoPagina: TAMANHO_PAGINA,
       });
-      patch({ listaAtual: resp.itens });
+      patch({ listaAtual: acumular ? [...state.listaAtual, ...resp.itens] : resp.itens });
       setTotal(resp.total);
+      setPagina(numeroPagina);
     } catch (err) {
-      patch({ listaAtual: [], toast: (err as Error).message });
-      setTotal(0);
+      if (!acumular) patch({ listaAtual: [] });
+      patch({ toast: (err as Error).message });
     } finally {
-      setCarregandoLista(false);
+      if (acumular) setCarregandoMais(false); else setCarregandoLista(false);
     }
   }
 
-  useEffect(() => { carregarLista(); }, [tipo, state.viewedProfileId, state.searchField, state.sortField, state.sortDir, buscaDebounced, pagina]);
+  // Qualquer mudança de filtro/ordenação/perfil/tipo recomeça do zero, na página 1.
+  useEffect(() => {
+    carregarPagina(1);
+  }, [tipo, state.viewedProfileId, state.searchField, state.sortField, state.sortDir, buscaDebounced]);
+
+  // Scroll infinito: observa uma sentinela no fim da lista e carrega a próxima página quando ela aparece.
+  const carregarMaisRef = useRef<() => void>(() => {});
+  carregarMaisRef.current = () => {
+    if (carregandoLista || carregandoMais || !temMais) return;
+    carregarPagina(pagina + 1);
+  };
+  useEffect(() => {
+    const alvo = sentinelaRef.current;
+    if (!alvo) return;
+    const observer = new IntersectionObserver((entradas) => {
+      if (entradas[0].isIntersecting) carregarMaisRef.current();
+    }, { rootMargin: '600px' });
+    observer.observe(alvo);
+    return () => observer.disconnect();
+  }, []);
+
+  function carregarLista() { carregarPagina(1); }
 
   function trocarPerfil(id: number | null) {
     patch({ viewedProfileId: id, filterCategory: 'all' });
@@ -245,23 +269,9 @@ export function CategoryListScreen() {
           </div>
         )}
 
-        {!carregandoLista && totalPaginas > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, margin: '18px 0' }}>
-            <button
-              onClick={() => setPagina((p) => Math.max(1, p - 1))}
-              disabled={pagina <= 1}
-              style={{ ...miniIconButtonStyle, width: 'auto', padding: '0 14px', opacity: pagina <= 1 ? 0.4 : 1 }}
-            >
-              ← {t('previous')}
-            </button>
-            <span style={{ fontSize: 12.5, color: v.textMuted }}>{pagina} / {totalPaginas}</span>
-            <button
-              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-              disabled={pagina >= totalPaginas}
-              style={{ ...miniIconButtonStyle, width: 'auto', padding: '0 14px', opacity: pagina >= totalPaginas ? 0.4 : 1 }}
-            >
-              {t('next')} →
-            </button>
+        {!carregandoLista && listaAtual.length > 0 && (
+          <div ref={sentinelaRef} style={{ textAlign: 'center', padding: '18px 0', fontSize: 12, color: v.textMuted, minHeight: 1 }}>
+            {carregandoMais && t('loading')}
           </div>
         )}
       </div>
