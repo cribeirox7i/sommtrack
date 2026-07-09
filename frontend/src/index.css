@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; overflow-x: hidden; max-width: 100%; }
-body { font-family: 'Manrope', sans-serif; -webkit-font-smoothing: antialiased; }
+body { font-family: 'Manrope', sans-serif; -webkit-font-smoothing: antialiased; background: var(--bg, #131110); }
 input, select, textarea, button { font-family: 'Manrope', sans-serif; }
 #root { overflow-x: clip; }
 .tabela-wrap { overflow-x: auto; }
@@ -11,6 +11,12 @@ input, select, textarea, button { font-family: 'Manrope', sans-serif; }
   background: var(--bg);
 }
 .auth-frame > .auth-phone {
-  width: 100%; max-width: 440px;
+  width: 100%; max-width: 480px;
+}
+
+/* Coluna central de leitura confortável em telas largas — sem moldura/sombra de celular,
+   só limita a largura do conteúdo mobile-first (o fundo continua ocupando a tela toda). */
+.app-shell {
+  max-width: 480px; margin: 0 auto; position: relative;
 }
 

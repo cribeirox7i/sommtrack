@@ -33,7 +33,7 @@ export function App() {
   const comBottomNav = state.tela === 'home' || state.tela === 'list';
 
   return (
-    <div style={{ ...pageStyle, paddingBottom: comBottomNav ? 64 : 0 }}>
+    <div className="app-shell" style={{ ...pageStyle, paddingBottom: comBottomNav ? 64 : 0 }}>
       {renderTela()}
       {comBottomNav && <BottomNav />}
       <Toast />
