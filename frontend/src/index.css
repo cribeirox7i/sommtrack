@@ -11,12 +11,18 @@ input, select, textarea, button { font-family: 'Manrope', sans-serif; }
   background: var(--bg);
 }
 .auth-frame > .auth-phone {
-  width: 100%; max-width: 480px;
+  width: 100%;
 }
 
 /* Coluna central de leitura confortável em telas largas — sem moldura/sombra de celular,
-   só limita a largura do conteúdo mobile-first (o fundo continua ocupando a tela toda). */
-.app-shell {
-  max-width: 480px; margin: 0 auto; position: relative;
+   só limita a largura do conteúdo mobile-first (o fundo continua ocupando a tela toda).
+   Abaixo de 700px (celular) ocupa 100%; acima disso, 70% da tela até um teto de 900px. */
+.app-shell, .auth-frame > .auth-phone, .bottom-nav {
+  width: 100%; margin: 0 auto; position: relative;
+}
+@media (min-width: 700px) {
+  .app-shell, .auth-frame > .auth-phone, .bottom-nav {
+    width: 70%; max-width: 900px;
+  }
 }
 

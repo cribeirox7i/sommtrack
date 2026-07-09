@@ -27,8 +27,8 @@ export function BottomNav() {
   }
 
   return (
-    <nav style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, maxWidth: 480, margin: '0 auto', display: 'flex', background: v.surface,
+    <nav className="bottom-nav" style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', background: v.surface,
       borderTop: `1px solid ${v.border}`, paddingBottom: 'env(safe-area-inset-bottom)', zIndex: 100,
     }}>
       {ABAS.map((aba) => {

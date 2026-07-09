@@ -12,8 +12,12 @@ function normalizarCabecalho_(nome) {
     .replace(/\s+/g, '_');
 }
 
+// Cache válido só durante a execução atual (evita reabrir a planilha a cada
+// aba lida — homeDashboard_, por exemplo, lê 4 abas na mesma requisição).
+var _ssCache_ = null;
 function ss_() {
-  return SpreadsheetApp.openById(SHEET_ID);
+  if (!_ssCache_) _ssCache_ = SpreadsheetApp.openById(SHEET_ID);
+  return _ssCache_;
 }
 
 function planilha_(nomeAba) {
