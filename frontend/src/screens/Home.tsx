@@ -129,15 +129,15 @@ export function HomeScreen() {
                 <button
                   key={c.tipo}
                   onClick={() => abrirStats(c.tipo)}
-                  style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left', border: `1px solid ${v.border}` }}
+                  style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left', border: `1px solid ${v.border}`, minWidth: 0, width: '100%', boxSizing: 'border-box' }}
                 >
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: v.accentSoft, color: v.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 38, height: 38, minWidth: 38, borderRadius: 10, background: v.accentSoft, color: v.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon name={ICONE_TIPO[c.tipo]} size={20} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: v.textMuted, fontWeight: 700 }}>{t(ROTULO_TIPO[c.tipo])}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, color: v.textMuted, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t(ROTULO_TIPO[c.tipo])}</div>
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 800 }}>{c.total}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, flexShrink: 0 }}>{c.total}</div>
                 </button>
               ))}
             </div>

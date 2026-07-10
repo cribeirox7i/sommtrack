@@ -15,7 +15,7 @@ export function HeaderBusca({ onFieldOptions }: { onFieldOptions?: { value: stri
     { value: 'manufacturer', label: t('manufacturer') }, { value: 'country', label: t('country') },
   ];
   return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '14px 16px' }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '14px 16px', paddingTop: 'calc(14px + env(safe-area-inset-top))' }}>
       <input
         value={state.searchQuery}
         onChange={(e) => patch({ searchQuery: e.target.value })}
@@ -48,7 +48,7 @@ export function HeaderBusca({ onFieldOptions }: { onFieldOptions?: { value: stri
 export function HeaderVoltar({ titulo, telaVolta, onSalvar }: { titulo: string; telaVolta: 'home' | 'list'; onSalvar?: () => void }) {
   const { state, patch } = useApp();
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', paddingTop: 'calc(14px + env(safe-area-inset-top))' }}>
       <button onClick={() => patch({ tela: telaVolta, isEditing: false })} style={{
         background: 'none', border: 'none', color: v.textMuted, fontWeight: 700, fontSize: 13, cursor: 'pointer',
         display: 'flex', alignItems: 'center', gap: 4,

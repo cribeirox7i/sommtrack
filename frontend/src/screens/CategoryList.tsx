@@ -24,7 +24,14 @@ function categoriaLabel(tipo: TipoItem, item: AnyItem, bjcp: { bjcp21_id: string
   return '';
 }
 
-const TAMANHO_PAGINA = 30;
+// Maior que o necessário pra uma tela: como o custo de cada chamada ao Apps Script
+// é dominado pelo overhead fixo (não pelo volume), poucas chamadas com mais itens
+// cada uma é mais fluido do que muitas chamadas pequenas durante o scroll.
+const TAMANHO_PAGINA = 60;
+
+// Botões de ação do deck ficam empilhados ao lado da miniatura (72px) — precisam ser
+// pequenos o bastante para os 3 caberem nessa altura (3×22 + 2×3 = 72).
+const deckAcaoBotaoStyle = { ...miniIconButtonStyle, width: 22, height: 22, minWidth: 22, borderRadius: 6 };
 
 export function CategoryListScreen() {
   const { state, patch } = useApp();
@@ -105,7 +112,7 @@ export function CategoryListScreen() {
     if (!sentinelaEl) return;
     const observer = new IntersectionObserver((entradas) => {
       if (entradas[0].isIntersecting) carregarMaisRef.current();
-    }, { rootMargin: '600px' });
+    }, { rootMargin: '1200px' });
     observer.observe(sentinelaEl);
     return () => observer.disconnect();
   }, [sentinelaEl]);
@@ -214,7 +221,7 @@ export function CategoryListScreen() {
               <div
                 key={idItem(tipo, item)}
                 onClick={() => abrirItem(item, false)}
-                style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: `1px solid ${v.border}`, cursor: 'pointer', alignItems: 'center' }}
+                style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: `1px solid ${v.border}`, cursor: 'pointer', alignItems: 'center' }}
               >
                 <div style={{ width: 72, height: 72, flexShrink: 0 }}>
                   <PlaceholderImage nome={nomeItem(tipo, item)} url={imgUrlItem(tipo, item)} aspect="1 / 1" />
@@ -228,10 +235,10 @@ export function CategoryListScreen() {
                   </div>
                 </div>
                 {podeEditar && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                    <button style={miniIconButtonStyle} onClick={() => abrirItem(item, true)}><Icon name="edit" size={15} /></button>
-                    <button style={miniIconButtonStyle} onClick={(e) => duplicar(item, e)}><Icon name="duplicate" size={15} /></button>
-                    <button style={{ ...miniIconButtonStyle, borderColor: v.danger, color: v.danger }} onClick={() => setConfirmarExclusao(item)}><Icon name="delete" size={15} /></button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                    <button style={deckAcaoBotaoStyle} onClick={() => abrirItem(item, true)}><Icon name="edit" size={11} /></button>
+                    <button style={deckAcaoBotaoStyle} onClick={(e) => duplicar(item, e)}><Icon name="duplicate" size={11} /></button>
+                    <button style={{ ...deckAcaoBotaoStyle, borderColor: v.danger, color: v.danger }} onClick={() => setConfirmarExclusao(item)}><Icon name="delete" size={11} /></button>
                   </div>
                 )}
               </div>

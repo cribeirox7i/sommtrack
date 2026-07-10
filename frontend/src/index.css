@@ -24,5 +24,18 @@ input, select, textarea, button { font-family: 'Manrope', sans-serif; }
   .app-shell, .auth-frame > .auth-phone, .bottom-nav {
     width: 70%; max-width: 900px;
   }
+
+  /* Textura sutil nas laterais ociosas (fora da coluna central) — não usa imagem
+     externa, só gradientes, e fica em tom bem discreto pra não competir com o app. */
+  body {
+    --textura-ponto: color-mix(in oklch, var(--border, #333) 55%, transparent);
+    background-image:
+      radial-gradient(var(--textura-ponto) 1px, transparent 1px),
+      radial-gradient(var(--textura-ponto) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: 0 0, 14px 14px;
+    background-attachment: fixed;
+    background-color: var(--bg, #131110);
+  }
 }
 
